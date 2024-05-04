@@ -122,6 +122,24 @@ func (r *Room) restartMoves() {
 	}
 }
 
+func (r *Room) removePlayer(player string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for i, p := range r.RoomData.Players {
+		if p == player {
+			r.RoomData.Players = append(r.RoomData.Players[:i], r.RoomData.Players[i+1:]...)
+		}
+	}
+
+	for i, m := range r.RoomData.Moves {
+		if m.Username == player {
+			r.RoomData.Moves = append(r.RoomData.Moves[:i], r.RoomData.Moves[i+1:]...)
+			return
+		}
+	}
+}
+
 func WsHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -151,9 +169,13 @@ func WsHandler(w http.ResponseWriter, r *http.Request) {
 		var parsedNewMove NewMove
 		json.Unmarshal([]byte(newMove), &parsedNewMove)
 
+		removePlayer := parsedNewMove.RemovePlayer
 		restartGame := parsedNewMove.RestartGame
 
-		if restartGame {
+		if removePlayer {
+			room.removePlayer(parsedNewMove.Move.Username)
+			delete(clients, conn)
+		} else if restartGame {
 			room.restartMoves()
 		} else {
 			if parsedNewMove.Move.Username != "" {
