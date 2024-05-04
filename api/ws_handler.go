@@ -87,6 +87,28 @@ func (r *Room) addRoomData(m NewMove) {
 	}
 }
 
+func (r *Room) getRoomData() RoomData {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.RoomData
+}
+
+func (r *Room) sendRoomData(roomId string) {
+	for client, roomID := range clients {
+		if roomID == roomId {
+			prev, _ := json.Marshal(r.getRoomData())
+
+			var oldRoomData RoomData
+			json.Unmarshal([]byte(prev), &oldRoomData)
+
+			if err := client.WriteMessage(websocket.TextMessage, []byte(prev)); err != nil {
+				log.Println("Error sending previous room data: ", err)
+				return
+			}
+		}
+	}
+}
+
 func WsHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -102,6 +124,8 @@ func WsHandler(w http.ResponseWriter, r *http.Request) {
 		room = &Room{}
 		rooms[roomId] = room
 	}
+
+	room.sendRoomData(roomId)
 
 	for {
 		_, newMove, err := conn.ReadMessage()
@@ -119,5 +143,6 @@ func WsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		room.addRoomData(parsedNewMove)
+		room.sendRoomData(roomId)
 	}
 }
