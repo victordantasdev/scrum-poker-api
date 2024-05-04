@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"sync"
 
@@ -47,4 +48,30 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
+}
+
+func WsHandler(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Fatal("Error upgrading connection:", err)
+	}
+	defer conn.Close()
+
+	roomId := r.URL.Path[len("/ws/"):]
+	clients[conn] = roomId
+
+	room, ok := rooms[roomId]
+	if !ok {
+		room = &Room{}
+		rooms[roomId] = room
+	}
+
+	for {
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			log.Println("Error reading ws message:", err)
+			delete(clients, conn)
+			return
+		}
+	}
 }
