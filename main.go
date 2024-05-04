@@ -15,6 +15,7 @@ func main() {
 	}
 
 	http.HandleFunc("GET /healtz", api.HealtzHandler)
+	http.HandleFunc("/ws/", api.WsHandler)
 
 	log.Println("Server running on port", port)
 	err := http.ListenAndServe(":"+port, nil)
