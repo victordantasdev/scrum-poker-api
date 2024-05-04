@@ -1,8 +1,10 @@
 package api
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -50,6 +52,41 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+func (r *Room) addRoomData(m NewMove) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if len(m.Settings.Deck) != 0 {
+		r.RoomData.Settings.Deck = m.Settings.Deck
+	}
+
+	r.RoomData.Settings.ShowCards = m.Settings.ShowCards
+	r.RoomData.Settings.RestartGame = m.Settings.RestartGame
+	r.RoomData.Settings.MaxPlayers = m.Settings.MaxPlayers
+
+	if m.Move.Username != "" {
+		for i, move := range r.RoomData.Moves {
+			if move.Username == m.Username {
+				r.RoomData.Moves[i] = m.Move
+				return
+			}
+		}
+
+		r.RoomData.Moves = append(r.RoomData.Moves, m.Move)
+	}
+
+	if m.Player != "" {
+		for i, player := range r.RoomData.Players {
+			if player == m.Player {
+				r.RoomData.Players[i] = m.Player
+				return
+			}
+		}
+
+		r.RoomData.Players = append(r.RoomData.Players, m.Player)
+	}
+}
+
 func WsHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -67,11 +104,20 @@ func WsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for {
-		_, _, err := conn.ReadMessage()
+		_, newMove, err := conn.ReadMessage()
 		if err != nil {
 			log.Println("Error reading ws message:", err)
 			delete(clients, conn)
 			return
 		}
+
+		var parsedNewMove NewMove
+		json.Unmarshal([]byte(newMove), &parsedNewMove)
+
+		if parsedNewMove.Move.Username != "" {
+			log.Println(parsedNewMove.Move.Username + " selected card " + strconv.Itoa(parsedNewMove.Move.SelectedCard))
+		}
+
+		room.addRoomData(parsedNewMove)
 	}
 }
