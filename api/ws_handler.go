@@ -109,6 +109,19 @@ func (r *Room) sendRoomData(roomId string) {
 	}
 }
 
+func (r *Room) restartMoves() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.RoomData.Settings.ShowCards = false
+	r.RoomData.Settings.RestartGame = false
+
+	for i := range r.RoomData.Moves {
+		r.RoomData.Moves[i].SelectedCard = -1
+		r.RoomData.Moves[i].SelectedCardIndex = -1
+	}
+}
+
 func WsHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -138,11 +151,18 @@ func WsHandler(w http.ResponseWriter, r *http.Request) {
 		var parsedNewMove NewMove
 		json.Unmarshal([]byte(newMove), &parsedNewMove)
 
-		if parsedNewMove.Move.Username != "" {
-			log.Println(parsedNewMove.Move.Username + " selected card " + strconv.Itoa(parsedNewMove.Move.SelectedCard))
+		restartGame := parsedNewMove.RestartGame
+
+		if restartGame {
+			room.restartMoves()
+		} else {
+			if parsedNewMove.Move.Username != "" {
+				log.Println(parsedNewMove.Move.Username + " selected card " + strconv.Itoa(parsedNewMove.Move.SelectedCard))
+			}
+
+			room.addRoomData(parsedNewMove)
 		}
 
-		room.addRoomData(parsedNewMove)
 		room.sendRoomData(roomId)
 	}
 }
