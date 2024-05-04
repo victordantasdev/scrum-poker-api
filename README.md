@@ -1,6 +1,6 @@
 # Scrum Poker API
 
-Welcome to the Scrum Poker API! This project provides the backend functionality for the Scrum Poker App, facilitating Agile estimation sessions.
+Welcome to the Scrum Poker API! This project provides the backend functionality for the [Scrum Poker App](https://github.com/victordantasdev/scrum-poker-app), facilitating Agile estimation sessions.
 
 ## Installation
 
