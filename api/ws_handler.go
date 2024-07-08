@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -19,7 +18,7 @@ type Settings struct {
 
 type Move struct {
 	Username          string `json:"username"`
-	SelectedCard      int    `json:"selected_card"`
+	SelectedCard      string    `json:"selected_card"`
 	SelectedCardIndex int    `json:"selected_card_index"`
 	RemovePlayer      bool   `json:"remove_player"`
 }
@@ -117,7 +116,7 @@ func (r *Room) restartMoves() {
 	r.RoomData.Settings.RestartGame = false
 
 	for i := range r.RoomData.Moves {
-		r.RoomData.Moves[i].SelectedCard = -1
+		r.RoomData.Moves[i].SelectedCard = ""
 		r.RoomData.Moves[i].SelectedCardIndex = -1
 	}
 }
@@ -179,7 +178,7 @@ func WsHandler(w http.ResponseWriter, r *http.Request) {
 			room.restartMoves()
 		} else {
 			if parsedNewMove.Move.Username != "" {
-				log.Println(parsedNewMove.Move.Username + " selected card " + strconv.Itoa(parsedNewMove.Move.SelectedCard))
+				log.Println(parsedNewMove.Move.Username + " selected card " + parsedNewMove.Move.SelectedCard)
 			}
 
 			room.addRoomData(parsedNewMove)
